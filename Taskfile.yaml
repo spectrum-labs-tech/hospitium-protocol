@@ -1,0 +1,21 @@
+version: "3"
+
+env:
+  CGO_ENABLED: "0"
+
+tasks:
+  default:
+    cmds: [task: check]
+  check:
+    desc: Everything CI checks (fmt, vet, lint, tests, tidy, SPDX headers)
+    cmds:
+      - test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
+      - go vet ./...
+      - golangci-lint run ./...
+      - go test -count=1 ./...
+      - go mod tidy -diff
+      - task: spdx
+  spdx:
+    cmd: |
+      missing=$(grep -L 'SPDX-License-Identifier: Apache-2.0' $(git ls-files -co --exclude-standard '*.go') || true)
+      if [ -n "$missing" ]; then echo "Missing SPDX header:"; echo "$missing"; exit 1; fi

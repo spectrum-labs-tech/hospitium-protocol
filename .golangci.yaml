@@ -1,0 +1,59 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  default: standard # errcheck, govet, ineffassign, staticcheck, unused
+  enable:
+    - bodyclose
+    - contextcheck # context must flow from the request/signal down to every call that accepts one
+    - noctx # no context-less net/http, database/sql or exec calls
+    - sloglint # with a context in scope, log with the *Context variants
+    - copyloopvar
+    - depguard
+    - errorlint
+    - forbidigo
+    - gosec
+    - misspell
+    - nilerr
+    - revive
+    - rowserrcheck
+    - sqlclosecheck
+    - unconvert
+    - usestdlibvars
+  settings:
+    sloglint:
+      context: scope
+      kv-only: true
+    depguard:
+      rules:
+        logging:
+          deny:
+            - pkg: "log$"
+              desc: "log with log/slog"
+    forbidigo:
+      forbid:
+        - pattern: ^(print|println)$
+          msg: "log with log/slog, or write to an io.Writer"
+    revive:
+      rules:
+        - name: exported
+          disabled: true
+        - name: package-comments
+        - name: var-naming
+    misspell:
+      locale: US
+      # "cancelled" is a persisted status value; keep one spelling everywhere.
+      ignore-rules: [cancelled, cancelling]
+  exclusions:
+    presets: [comments, std-error-handling]
+    rules:
+      - path: _test\.go
+        linters: [gosec, noctx]
+
+formatters:
+  enable: [gofmt, goimports]
+  settings:
+    goimports:
+      local-prefixes: [github.com/spectrum-labs-tech/hospitium-protocol]
