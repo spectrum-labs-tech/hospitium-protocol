@@ -97,6 +97,10 @@ const (
 
 type LauncherSpec struct {
 	PackageName string `json:"package_name"`
+	// VersionCode is the exact version wanted. Agents never go below the
+	// version already on the TV: on Android a downgrade means uninstalling,
+	// which deletes the launcher's data, pairing included. To undo a bad
+	// release, republish the good build with a higher VersionCode.
 	VersionCode int64  `json:"version_code"`
 	APKURL      string `json:"apk_url"`
 	// SHA256 is the hex digest of the APK. Agents must refuse to install an
@@ -131,7 +135,7 @@ const (
 	OpClearAppData      = "clear_app_data"     // params: ClearAppDataParams
 	OpReboot            = "reboot"             // params: none
 	OpDiagnostics       = "diagnostics"        // params: none; fixed, read-only command set
-	OpReinstallLauncher = "reinstall_launcher" // params: none; uninstall + reinstall from spec
+	OpReinstallLauncher = "reinstall_launcher" // params: none; reinstall the spec's build in place, keeping app data (never uninstalls)
 )
 
 type Operation struct {
