@@ -19,3 +19,126 @@ tasks:
     cmd: |
       missing=$(grep -L 'SPDX-License-Identifier: Apache-2.0' $(git ls-files -co --exclude-standard '*.go') || true)
       if [ -n "$missing" ]; then echo "Missing SPDX header:"; echo "$missing"; exit 1; fi
+
+  # ---- releases ----
+  # Releases are tags on origin/main, cut only through `task release`. Consumers (the agent and
+  # the control plane) pick them up by version, so a bad tag is permanent: the module proxy
+  # caches it forever. Every guard below exists so an agent cannot cut one by mistake.
+  #
+  # Runs in go-task's embedded shell: use only git, gh, go and shell builtins (no grep/head on
+  # the Windows PATH), and never two variables whose names differ only by case (they are one
+  # variable on Windows).
+
+  release:
+    desc: >-
+      Release: tag the tip of origin/main after CI and an API-compatibility check.
+      Usage: task release BUMP=minor|patch   (DRY_RUN=1 checks everything without tagging)
+    silent: true
+    cmds:
+      - |
+        set -eu
+        bump="{{.BUMP | default ""}}"
+        dry="{{.DRY_RUN | default ""}}"
+        case "$bump" in
+          minor|patch) : ;;
+          major) echo "Within v1 the protocol only grows. A breaking change is a new v2 package, never a major tag." >&2; exit 1 ;;
+          *) echo "Usage: task release BUMP=minor|patch" >&2; exit 1 ;;
+        esac
+        # Tag what was PUSHED, never the local HEAD: HEAD can hold commits nobody pushed or reviewed.
+        git fetch --quiet origin main --tags
+        sha="$(git rev-parse origin/main)"
+        unpushed="$(git rev-list --count origin/main..HEAD)"
+        [ "$unpushed" = "0" ] || echo "release: HEAD has ${unpushed} unpushed commit(s); they are NOT in this release."
+        existing="$(git tag --points-at "$sha")"
+        [ -z "$existing" ] || { echo "origin/main (${sha}) is already released as ${existing}." >&2; exit 1; }
+        latest="$(git for-each-ref --sort=-v:refname --count=1 --format='%(refname:short)' 'refs/tags/v*')"
+        [ -n "$latest" ] || latest="v0.0.0"
+        new="$({{.TASK_EXE}} release:next LATEST="$latest" BUMP="$bump")"
+        echo "release: ${latest} -> ${new} at ${sha}"
+        # CI must have passed on exactly this commit.
+        passed="$(gh run list --repo spectrum-labs-tech/hospitium-protocol --workflow ci.yaml --commit "$sha" --json conclusion --jq '[.[] | select(.conclusion == "success")] | length')"
+        [ "$passed" != "0" ] || { echo "CI has not passed on ${sha}. Wait for it or fix it: gh run list --commit ${sha}" >&2; exit 1; }
+        # API compatibility of exactly this commit.
+        {{.TASK_EXE}} release:api SHA="$sha" BASE="$latest" VERSION="$new"
+        if [ -n "$dry" ]; then echo "release: DRY_RUN, every check passed; would tag ${new} at ${sha}."; exit 0; fi
+        git tag -a "$new" -m "$new" "$sha"
+        git push origin "$new"
+        echo "release: pushed ${new} at ${sha}. Next: bump consumers (agent, then control plane) to ${new}."
+
+  release:api:
+    desc: "Check that commit SHA is an additive change from BASE, as VERSION (part of release; runnable alone)"
+    silent: true
+    requires:
+      vars: [SHA, BASE, VERSION]
+    cmds:
+      - |
+        set -eu
+        sha="{{.SHA}}"
+        latest="{{.BASE}}"
+        new="{{.VERSION}}"
+        base="$latest"
+        [ "$base" != "v0.0.0" ] || base="none"
+        wt="$(git rev-parse --absolute-git-dir)/release-check"
+        git worktree remove --force "$wt" 2>/dev/null || true
+        git worktree add --quiet --detach "$wt" "$sha"
+        set +e
+        report="$(cd "$wt" && go run golang.org/x/exp/cmd/gorelease@latest -base="$base" -version="$new" 2>&1)"
+        rc=$?
+        set -e
+        git worktree remove --force "$wt"
+        echo "$report"
+        # gorelease exits 0 on a v0 module even when it breaks the API (v0 semver allows it), so
+        # the report heading is the check. Verified 2026-11-16: removing a field prints
+        # "## incompatible changes" and exits 0.
+        case "$report" in
+          *"incompatible changes"*|*"Incompatible changes"*) echo "release: incompatible API change. v1 is additive only: add fields, never remove, rename or re-type." >&2; exit 1 ;;
+        esac
+        [ "$rc" = "0" ] || { echo "release: gorelease rejected ${new} (see above)." >&2; exit 1; }
+
+  release:next:
+    desc: "Print the version after LATEST for BUMP (the one implementation release and release:check share)"
+    silent: true
+    requires:
+      vars: [LATEST, BUMP]
+    cmds:
+      - |
+        set -eu
+        latest="{{.LATEST}}"
+        bump="{{.BUMP}}"
+        case "$latest" in
+          *-*|*+*) echo "LATEST must be a plain vX.Y.Z; these repos don't use pre-release tags (got '$latest')" >&2; exit 1 ;;
+          v[0-9]*.[0-9]*.[0-9]*) : ;;
+          *) echo "LATEST must be vX.Y.Z (got '$latest')" >&2; exit 1 ;;
+        esac
+        case "$bump" in major|minor|patch) : ;; *) echo "BUMP must be major|minor|patch (got '$bump')" >&2; exit 1 ;; esac
+        v="${latest#v}"
+        maj="${v%%.*}"
+        rest="${v#*.}"
+        min="${rest%%.*}"
+        pat="${rest#*.}"
+        if [ "$bump" = "major" ]; then
+          maj=$((maj + 1)); min=0; pat=0
+        elif [ "$bump" = "minor" ]; then
+          min=$((min + 1)); pat=0
+        else
+          pat=$((pat + 1))
+        fi
+        echo "v${maj}.${min}.${pat}"
+
+  release:check:
+    desc: Self-test the release version arithmetic in task's own shell (where it actually runs)
+    silent: true
+    cmds:
+      - |
+        set -eu
+        fail=0
+        for c in v1.1.8:patch:v1.1.9 v1.1.8:minor:v1.2.0 v1.1.8:major:v2.0.0 v0.0.0:minor:v0.1.0 v0.2.0:minor:v0.3.0 v0.9.9:minor:v0.10.0 v0.10.0:patch:v0.10.1; do
+          latest="${c%%:*}"
+          rest="${c#*:}"
+          bump="${rest%%:*}"
+          want="${rest#*:}"
+          got="$({{.TASK_EXE}} release:next LATEST="$latest" BUMP="$bump")"
+          if [ "$got" = "$want" ]; then echo "  ok   ${latest} ${bump} -> ${got}"; else echo "  FAIL ${latest} ${bump} -> ${got} (want ${want})"; fail=1; fi
+        done
+        [ "$fail" = "0" ] || { echo "release arithmetic is WRONG; do not cut a release" >&2; exit 1; }
+        echo "release arithmetic ok"

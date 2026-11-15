@@ -51,6 +51,12 @@ go get github.com/spectrum-labs-tech/hospitium-protocol@latest
 
 Releases are Git tags (`vX.Y.Z`). Within `v1`, changes are additive only.
 
+Maintainers cut a release with `task release BUMP=minor|patch` and never tag by hand. The task tags
+the tip of `origin/main`, never a local commit, and only after CI has passed on that exact commit.
+It also runs [`gorelease`](https://pkg.go.dev/golang.org/x/exp/cmd/gorelease) against the previous
+tag and refuses anything that removes, renames or re-types part of the API. A major bump is refused
+too: a breaking change is a new `v2` package. `DRY_RUN=1` runs every check without tagging.
+
 ## License
 
 Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).

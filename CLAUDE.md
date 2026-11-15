@@ -14,6 +14,15 @@ the TV launcher. Read `README.md`.
 - No dependencies beyond the standard library.
 - **Every Go file starts with** `// SPDX-License-Identifier: Apache-2.0`.
 
+## Releases
+
+- **Only through `task release BUMP=minor|patch`, and only when the maintainer asks.** Never
+  `git tag` or `git push --tags` by hand. A tag is permanent: the Go module proxy caches it forever.
+- The task tags the tip of `origin/main` once CI has passed on it, and runs `gorelease` against the
+  previous tag (`task release:api`). Push first; local commits are never released.
+- `task release:check` self-tests the version arithmetic in task's own shell. Never keep two copies
+  of that arithmetic: `release:next` is the only implementation.
+
 ## Commands
 
 `task check` (see `Taskfile.yaml`).
