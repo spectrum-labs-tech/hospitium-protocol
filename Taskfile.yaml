@@ -39,6 +39,8 @@ tasks:
         set -eu
         bump="{{.BUMP | default ""}}"
         dry="{{.DRY_RUN | default ""}}"
+        # The arithmetic self-test runs first, in this same shell, on every release.
+        {{.TASK_EXE}} release:check >/dev/null || { echo "release: version arithmetic self-test failed; run task release:check" >&2; exit 1; }
         case "$bump" in
           minor|patch) : ;;
           major) echo "Within v1 the protocol only grows. A breaking change is a new v2 package, never a major tag." >&2; exit 1 ;;
