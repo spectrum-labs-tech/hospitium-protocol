@@ -17,7 +17,7 @@ standalone from a local desired-state file.
 1. **Devices only pull.** Every request goes from the device to the control plane over HTTPS. A property never needs inbound ports.
 2. **Declarative for state, imperative for events.** Persistent TV configuration (`DeviceSpec`) is reconciled on every poll and must be idempotent. One-time actions (`Operation`) are separate, delivered at least once, and deduplicated by ID.
 3. **Closed operation set.** There's no arbitrary shell or ADB passthrough. New operation types need a protocol change.
-4. **Operations expire.** An agent must not start an operation after `expires_at`. This is one of two guards that stop a stale checkout cleanup from wiping the next guest's sessions. The other is server-side revalidation at delivery time.
+4. **Operations expire.** An agent must not start an operation after `expires_at`. This guard against a stale checkout cleanup wiping the next guest's sessions is the one an agent enforces on its own; a control plane adds its own checks when it delivers the operation.
 5. **Guest data carries its own expiry.** The launcher must hide `GuestInfo` after `expires_at` even if it never hears from the server again.
 6. **Additive evolution.** Within `v1`, fields are only ever added. Consumers ignore unknown fields. Breaking changes go into `v2` under a new path prefix.
 
