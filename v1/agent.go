@@ -180,6 +180,12 @@ type DeviceStatus struct {
 	LastError          string           `json:"last_error,omitempty"`
 	ReconciledAt       time.Time        `json:"reconciled_at"`
 	NextAttemptAt      *time.Time       `json:"next_attempt_at,omitempty"`
+	// Facts identifies the TV's hardware and firmware (added in v0.3.0).
+	Facts *DeviceFacts `json:"facts,omitempty"`
+	// Capabilities are observations made during this reconcile pass (added
+	// in v0.3.0). A pass reports only what it observed; an absent capability
+	// means "not observed this time", never "unsupported".
+	Capabilities []CapabilityObservation `json:"capabilities,omitempty"`
 }
 
 // Condition follows the Kubernetes convention: Type is a noun, Status is
@@ -205,4 +211,8 @@ type OperationResult struct {
 	Verification map[string]string `json:"verification,omitempty"`
 	StartedAt    time.Time         `json:"started_at"`
 	FinishedAt   time.Time         `json:"finished_at"`
+	// Capabilities are observations the operation produced, e.g. one
+	// CapAppDataCleanup result per package for clear_app_data (added in
+	// v0.3.0).
+	Capabilities []CapabilityObservation `json:"capabilities,omitempty"`
 }

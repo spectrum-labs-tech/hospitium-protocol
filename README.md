@@ -6,6 +6,7 @@ Wire contracts between a Hospitium control plane and the devices it manages. Apa
 |---|---|
 | `v1` (`agent.go`) | Management agent ⇄ control plane: enrollment, desired state, status, one-time operations |
 | `v1` (`launcher.go`) | TV launcher ⇄ control plane: pairing and guest-facing configuration |
+| `v1` (`capabilities.go`) | Per-TV facts and capability observations, decided by evidence rather than platform name |
 
 Anyone can implement either side. The reference agent is
 [`hospitium-agent`](https://github.com/spectrum-labs-tech/hospitium-agent), which can also run
