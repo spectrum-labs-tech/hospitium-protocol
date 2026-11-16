@@ -163,6 +163,38 @@ type StatusReport struct {
 	UptimeSeconds int64          `json:"uptime_seconds"`
 	MemAllocBytes uint64         `json:"mem_alloc_bytes"`
 	Devices       []DeviceStatus `json:"devices"`
+	// Discovered lists TVs the hub sees on its network that it may not manage yet (added in
+	// v0.5.0). The control plane proposes them to the owner; it never manages one until the owner
+	// adopts it. At most MaxDiscovered entries.
+	Discovered []DiscoveredTV `json:"discovered,omitempty"`
+}
+
+// MaxDiscovered bounds StatusReport.Discovered; a control plane ignores entries beyond it.
+const MaxDiscovered = 64
+
+// mDNS service types a hub browses to find TVs.
+const (
+	ServiceCast       = "_googlecast._tcp"
+	ServiceADBConnect = "_adb-tls-connect._tcp"
+	ServiceADBPairing = "_adb-tls-pairing._tcp"
+)
+
+// DiscoveredTV is one TV seen on the hub's network, merged across the services it advertises.
+type DiscoveredTV struct {
+	// Key identifies the TV across reports: the Cast device ID when it advertises Cast, otherwise
+	// the mDNS instance name.
+	Key string `json:"key"`
+	// Name is the name the TV advertises (Cast "fn"), such as "Living Room TV".
+	Name  string `json:"name,omitempty"`
+	Model string `json:"model,omitempty"` // Cast "md"
+	// Address is the TV's IP address on the hub's network.
+	Address string `json:"address"`
+	// ADBPort is the wireless debugging port when the TV advertises _adb-tls-connect, else 0
+	// (network debugging, when enabled, listens on 5555).
+	ADBPort int `json:"adb_port,omitempty"`
+	// Services are the mDNS service types seen for this TV.
+	Services []string  `json:"services"`
+	SeenAt   time.Time `json:"seen_at"`
 }
 
 type DeviceStatus struct {
