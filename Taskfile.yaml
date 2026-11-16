@@ -96,7 +96,10 @@ tasks:
         git worktree remove --force "$wt" 2>/dev/null || true
         git worktree add --quiet --detach "$wt" "$sha"
         set +e
-        report="$(cd "$wt" && go run golang.org/x/exp/cmd/gorelease@latest -base="$base" -version="$new" 2>&1)"
+        # gorelease looks up the new version; through the public proxy that caches a "not found"
+        # for a tag that doesn't exist yet, which then breaks consumers' builds for hours. Resolve
+        # this module straight from GitHub instead (it's a compatibility check, not a build).
+        report="$(cd "$wt" && GOPRIVATE=github.com/spectrum-labs-tech/hospitium-protocol           go run golang.org/x/exp/cmd/gorelease@latest -base="$base" -version="$new" 2>&1)"
         rc=$?
         set -e
         git worktree remove --force "$wt"
