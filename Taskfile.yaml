@@ -65,7 +65,19 @@ tasks:
         if [ -n "$dry" ]; then echo "release: DRY_RUN, every check passed; would tag ${new} at ${sha}."; exit 0; fi
         git tag -a "$new" -m "$new" "$sha"
         git push origin "$new"
-        echo "release: pushed ${new} at ${sha}. Next: bump consumers (agent, then control plane) to ${new}."
+        # Consumers' image builds fetch through the public module proxy; wait until it serves the tag.
+        info="https://proxy.golang.org/github.com/spectrum-labs-tech/hospitium-protocol/@v/${new}.info"
+        served=""
+        for _ in $(seq 1 30); do
+          if curl -fsS -o /dev/null "$info"; then served=1; break; fi
+          sleep 20
+        done
+        if [ -z "$served" ]; then
+          echo "release: WARNING ${new} is tagged but proxy.golang.org doesn't serve it yet (it may have cached a miss)." >&2
+          echo "release: don't bump consumers until ${info} answers 200." >&2
+          exit 1
+        fi
+        echo "release: pushed ${new} at ${sha}; the module proxy serves it. Next: bump consumers (agent, then control plane) to ${new}."
 
   release:api:
     desc: "Check that commit SHA is an additive change from BASE, as VERSION (part of release; runnable alone)"
