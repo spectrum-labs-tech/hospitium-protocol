@@ -109,7 +109,15 @@ type LauncherSpec struct {
 	Activation     string   `json:"activation"`
 	HomeActivity   string   `json:"home_activity,omitempty"` // e.g. "tech.spectrumlabs.hospitium.launcher/.MainActivity"
 	StockLaunchers []string `json:"stock_launchers,omitempty"`
+	// WakeToGuestbook (added in v0.7.0): when the TV wakes up showing another home screen, the agent
+	// brings the launcher to the front, started with LauncherExtraWake. For TVs where the launcher
+	// can't be the home screen (Fire OS). A control plane sets it only for a paired launcher.
+	WakeToGuestbook bool `json:"wake_to_guestbook,omitempty"`
 }
+
+// LauncherExtraWake is the boolean intent extra an agent sets when it starts the launcher because
+// the TV woke up. The launcher then opens with the announcements marked ShowOnWake.
+const LauncherExtraWake = "tech.spectrumlabs.hospitium.launcher.extra.WAKE"
 
 // AppSpec declares an app that must be present. Store apps (Netflix etc.)
 // cannot be sideloaded; when APKURL is empty the agent only verifies

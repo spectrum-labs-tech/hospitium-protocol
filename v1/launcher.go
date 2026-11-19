@@ -96,6 +96,9 @@ type Announcement struct {
 	Title     string     `json:"title"`
 	Body      string     `json:"body"`
 	ExpiresAt *time.Time `json:"expires_at,omitempty"`
+	// ShowOnWake (added in v0.7.0): open this announcement when the TV turns on, a message of the
+	// day, wherever the launcher is brought up on wake.
+	ShowOnWake bool `json:"show_on_wake,omitempty"`
 }
 
 // LauncherApp is a streaming app to feature on the home screen if installed.
