@@ -56,7 +56,12 @@ type LauncherConfig struct {
 	Guest         *GuestInfo     `json:"guest,omitempty"`
 	Announcements []Announcement `json:"announcements,omitempty"`
 	Apps          []LauncherApp  `json:"apps,omitempty"`
-	ServerTime    time.Time      `json:"server_time"`
+	// PopularApps (added in v0.7.0) are package names, most started first, by how often guests
+	// started them from the launcher across the whole property recently. It is an anonymous
+	// aggregate: a control plane leaves out apps started too rarely to say anything about the
+	// many. Launchers sort their app list by it, the rest alphabetically after.
+	PopularApps []string  `json:"popular_apps,omitempty"`
+	ServerTime  time.Time `json:"server_time"`
 	// RefreshAfterSeconds is the suggested polling interval.
 	RefreshAfterSeconds int `json:"refresh_after_seconds"`
 }
