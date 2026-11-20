@@ -68,12 +68,12 @@ tasks:
         # Consumers' image builds fetch through the public module proxy; wait until it serves the tag.
         info="https://proxy.golang.org/github.com/spectrum-labs-tech/hospitium-protocol/@v/${new}.info"
         served=""
-        for _ in $(seq 1 30); do
+        for _ in $(seq 1 75); do
           if curl -fsS -o /dev/null "$info"; then served=1; break; fi
           sleep 20
         done
         if [ -z "$served" ]; then
-          echo "release: WARNING ${new} is tagged but proxy.golang.org doesn't serve it yet (it may have cached a miss)." >&2
+          echo "release: WARNING ${new} is tagged but proxy.golang.org still doesn't serve it after 25 minutes." >&2
           echo "release: don't bump consumers until ${info} answers 200." >&2
           exit 1
         fi
