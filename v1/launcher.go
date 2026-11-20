@@ -60,8 +60,17 @@ type LauncherConfig struct {
 	// started them from the launcher across the whole property recently. It is an anonymous
 	// aggregate: a control plane leaves out apps started too rarely to say anything about the
 	// many. Launchers sort their app list by it, the rest alphabetically after.
-	PopularApps []string  `json:"popular_apps,omitempty"`
-	ServerTime  time.Time `json:"server_time"`
+	PopularApps []string `json:"popular_apps,omitempty"`
+	// Background (added in v0.8.0) is the home screen's image, resolved by the control plane for
+	// this TV. Nil means none is assigned: show one of FallbackBackgrounds. A control plane keeps
+	// filling the Branding background keys for control-plane images, for older launchers.
+	Background *Background `json:"background,omitempty"`
+	// FallbackBackgrounds (added in v0.8.0) are 1920x1080 images (PathLauncherMedia paths) a
+	// launcher downloads ahead of time and keeps, so it has something to show when nothing is
+	// assigned or the assigned image can't be loaded, offline included. Deleting files that leave
+	// the list is the launcher's job.
+	FallbackBackgrounds []string  `json:"fallback_backgrounds,omitempty"`
+	ServerTime          time.Time `json:"server_time"`
 	// RefreshAfterSeconds is the suggested polling interval.
 	RefreshAfterSeconds int `json:"refresh_after_seconds"`
 }

@@ -41,7 +41,22 @@ POST /v1/launcher/pairings              -> {code, poll_token}; TV shows the code
 admin claims the code in Hospitium
 GET  /v1/launcher/pairings/{code}       Bearer poll_token -> device_token (once)
 GET  /v1/launcher/config                Bearer device_token -> LauncherConfig (cacheable)
+GET  /v1/launcher/media/{sha256}        Bearer device_token -> image (immutable)
 ```
+
+### Backgrounds
+
+`LauncherConfig.background` is the home screen's image, and `Background.Valid` is the rule for
+using one:
+
+- An image with origin `control_plane` is a media path on the control plane. Fetch it with the
+  device token and cache it by address.
+- An image with origin `unsplash` is an `https://images.unsplash.com` URL. Unsplash's terms require
+  loading it from that URL. Fetch it with no token or cookies, and show its `attribution` whenever
+  it's on screen.
+- A launcher never sends its token to any other host.
+- Download the `fallback_backgrounds` ahead of time. Show one when no background is assigned or the
+  assigned one can't be loaded.
 
 ## Use
 
